@@ -5,11 +5,6 @@ namespace Shopware\Storefront\Framework\Routing;
 use Shopware\Core\Checkout\Cart\Exception\CustomerNotLoggedInException;
 use Shopware\Core\Checkout\Customer\Event\CustomerLoginEvent;
 use Shopware\Core\Checkout\Customer\Event\CustomerLogoutEvent;
-use Shopware\Core\Content\Seo\HreflangLoaderInterface;
-use Shopware\Core\Content\Seo\HreflangLoaderParameter;
-use Shopware\Core\Framework\App\ActiveAppsLoader;
-use Shopware\Core\Framework\App\Exception\AppUrlChangeDetectedException;
-use Shopware\Core\Framework\App\ShopId\ShopIdProvider;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\Routing\Event\SalesChannelContextResolvedEvent;
 use Shopware\Core\Framework\Routing\Exception\CustomerNotLoggedInRoutingException;
@@ -20,12 +15,9 @@ use Shopware\Core\PlatformRequest;
 use Shopware\Core\SalesChannelRequest;
 use Shopware\Core\System\SalesChannel\SalesChannelContext;
 use Shopware\Core\System\SystemConfig\SystemConfigService;
-use Shopware\Storefront\Event\StorefrontRenderEvent;
-use Shopware\Storefront\Theme\StorefrontPluginRegistryInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\SessionInterface;
 use Symfony\Component\HttpKernel\Event\ControllerEvent;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
@@ -45,12 +37,8 @@ class StorefrontSubscriber implements EventSubscriberInterface
     public function __construct(
         private readonly RequestStack $requestStack,
         private readonly RouterInterface $router,
-        private readonly HreflangLoaderInterface $hreflangLoader,
         private readonly MaintenanceModeResolver $maintenanceModeResolver,
-        private readonly ShopIdProvider $shopIdProvider,
-        private readonly ActiveAppsLoader $activeAppsLoader,
-        private readonly SystemConfigService $systemConfigService,
-        private readonly StorefrontPluginRegistryInterface $themeRegistry
+        private readonly SystemConfigService $systemConfigService
     ) {
     }
 
@@ -73,11 +61,6 @@ class StorefrontSubscriber implements EventSubscriberInterface
             ],
             CustomerLogoutEvent::class => [
                 'updateSessionAfterLogout',
-            ],
-            StorefrontRenderEvent::class => [
-                ['addHreflang'],
-                ['addShopIdParameter'],
-                ['addIconSetConfig'],
             ],
             SalesChannelContextResolvedEvent::class => [
                 ['replaceContextToken'],
@@ -212,14 +195,6 @@ class StorefrontSubscriber implements EventSubscriberInterface
             return;
         }
 
-        /** @var callable(): Response $controller */
-        $controller = $event->getController();
-
-        // happens if Controller is a closure
-        if (!\is_array($controller)) {
-            return;
-        }
-
         $isAllowed = $event->getRequest()->attributes->getBoolean('XmlHttpRequest');
 
         if ($isAllowed) {
@@ -240,69 +215,6 @@ class StorefrontSubscriber implements EventSubscriberInterface
         }
 
         $this->updateSession($context->getToken());
-    }
-
-    public function addHreflang(StorefrontRenderEvent $event): void
-    {
-        $request = $event->getRequest();
-        $route = $request->attributes->get('_route');
-
-        if ($route === null) {
-            return;
-        }
-
-        $routeParams = $request->attributes->get('_route_params', []);
-        $salesChannelContext = $request->attributes->get(PlatformRequest::ATTRIBUTE_SALES_CHANNEL_CONTEXT_OBJECT);
-        $parameter = new HreflangLoaderParameter($route, $routeParams, $salesChannelContext);
-        $event->setParameter('hrefLang', $this->hreflangLoader->load($parameter));
-    }
-
-    public function addShopIdParameter(StorefrontRenderEvent $event): void
-    {
-        if (!$this->activeAppsLoader->getActiveApps()) {
-            return;
-        }
-
-        try {
-            $shopId = $this->shopIdProvider->getShopId();
-        } catch (AppUrlChangeDetectedException) {
-            return;
-        }
-
-        $event->setParameter('appShopId', $shopId);
-    }
-
-    public function addIconSetConfig(StorefrontRenderEvent $event): void
-    {
-        $request = $event->getRequest();
-
-        // get name if theme is not inherited
-        $theme = $request->attributes->get(SalesChannelRequest::ATTRIBUTE_THEME_NAME);
-
-        if (!$theme) {
-            // get theme name from base theme because for inherited themes the name is always null
-            $theme = $request->attributes->get(SalesChannelRequest::ATTRIBUTE_THEME_BASE_NAME);
-        }
-
-        if (!$theme) {
-            return;
-        }
-
-        $themeConfig = $this->themeRegistry->getConfigurations()->getByTechnicalName($theme);
-
-        if (!$themeConfig) {
-            return;
-        }
-
-        $iconConfig = [];
-        foreach ($themeConfig->getIconSets() as $pack => $path) {
-            $iconConfig[$pack] = [
-                'path' => $path,
-                'namespace' => $theme,
-            ];
-        }
-
-        $event->setParameter('themeIconConfig', $iconConfig);
     }
 
     private function shouldRenewToken(SessionInterface $session, ?string $salesChannelId = null): bool

@@ -34,7 +34,8 @@
                         </span>
 
                         <span class="col-5 pb-2 shipping-value shipping-cost">
-                            <strong>{{ activeShipping.shippingCosts.totalPrice < 0 ? '-' : '+' }} {{ activeShipping.shippingCosts.totalPrice|abs|currency }}{{ 'general.star'|trans|sw_sanitize }}</strong>
+                            {% set shippingTotalPrice = activeShipping.shippingCosts.totalPrice ?? 0 %}
+                            <strong>{{ shippingTotalPrice < 0 ? '&minus;' : '+' }} {{ shippingTotalPrice|abs|currency }}{{ 'general.star'|trans|sw_sanitize }}</strong>
                         </span>
                     </div>
                 {% endblock %}

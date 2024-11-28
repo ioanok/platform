@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Shopware\Tests\Unit\Core\Framework\DataAbstractionLayer\Write\Command;
+namespace Shopware\Tests\Integration\Core\Framework\DataAbstractionLayer\Write\Command;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
