@@ -680,10 +680,10 @@
     "arSupportDevices": "iOS11+, Android 8.0+ with ARCore 1.9 support",
     "moveTheDeviceToStart": "Move the device to start",
     "tapToPlaceTheObject": "Tap to place the object",
-    "openAugmentedRealityView": "Open Augmented Reality View",
-    "augmentedRealityView": "Augmented Reality View",
-    "openArView": "Open AR View",
-    "openArViewDescription": "Open Augmented Reality View"
+    "openAugmentedRealityView": "Open Augmented Reality view",
+    "augmentedRealityView": "Augmented Reality view",
+    "openArView": "Open AR view",
+    "openArViewDescription": "Open Augmented Reality view"
   },
   "wishlist": {
     "cartTitle": "Your wishlist",
@@ -784,7 +784,7 @@
         "acceptButtonLabel": "Accept"
       },
       "imageGallery": {
-        "ariaLabel": "Image Gallery",
+        "ariaLabel": "Image gallery",
         "touchMove": "Touch and drag",
         "clickMove": "Click and move",
         "sliderDotLabel": "Show image %index% of %total%"

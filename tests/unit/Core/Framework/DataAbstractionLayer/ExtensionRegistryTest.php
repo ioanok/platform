@@ -79,7 +79,7 @@ class ExtensionRegistryTest extends TestCase
     public function testAttributeDefinition(): void
     {
         $definitionRegistry = $this->definitionRegistry([
-            'product.definition' => new AttributeEntityDefinition(['entity_name' => 'product']),
+            'product.definition' => new AttributeEntityDefinition(['entity_name' => 'product', 'fields' => []]),
         ]);
         $salesChannelDefinitionRegistry = $this->createMock(SalesChannelDefinitionInstanceRegistry::class);
 

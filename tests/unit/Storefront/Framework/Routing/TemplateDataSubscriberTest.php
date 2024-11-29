@@ -210,7 +210,7 @@ class TemplateDataSubscriberTest extends TestCase
             ->method('getConfigurations');
 
         $this->subscriber->addIconSetConfig($event);
-        static::assertNull($event->getParameters()['themeIconConfig']);
+        static::assertArrayNotHasKey('themeIconConfig', $event->getParameters());
     }
 
     public function testAddIconSetConfigWithValidTheme(): void
