@@ -69,7 +69,7 @@ $nav-link-font-size: if(feature('ACCESSIBILITY_TWEAKS'), $font-size-base, $font-
 $headings-font-weight: 700 !default;
 $headings-font-family: $sw-font-family-headline !default;
 
-$link-decoration: none !default;
+$link-decoration: if(feature('ACCESSIBILITY_TWEAKS'), underline, none) !default;
 $link-hover-decoration: underline !default;
 
 // Buttons + Forms

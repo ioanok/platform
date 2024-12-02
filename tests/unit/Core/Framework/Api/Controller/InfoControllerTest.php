@@ -74,7 +74,7 @@ class InfoControllerTest extends TestCase
             )
             ->willReturn('/admin/adminextensionapipluginwithlocalentrypoint/index.html');
 
-        $response = $this->infoController->config(Context::createDefaultContext(), Request::Create('http://localhost'));
+        $response = $this->infoController->config(Context::createDefaultContext(), Request::create('http://localhost'));
         $content = $response->getContent();
         static::assertIsString($content);
 

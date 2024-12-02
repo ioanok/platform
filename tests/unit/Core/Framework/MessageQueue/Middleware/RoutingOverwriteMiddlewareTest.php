@@ -1,33 +1,51 @@
 <?php declare(strict_types=1);
 
-namespace Shopware\Tests\Unit\Core\Framework\Adapter\Messenger;
+namespace Shopware\Tests\Unit\Core\Framework\MessageQueue\Middleware;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
 use Shopware\Core\Content\Product\DataAbstractionLayer\ProductIndexingMessage;
-use Shopware\Core\Framework\Adapter\Messenger\MessageBus;
 use Shopware\Core\Framework\DataAbstractionLayer\Indexing\EntityIndexingMessage;
 use Shopware\Core\Framework\Feature;
 use Shopware\Core\Framework\Log\Package;
 use Shopware\Core\Framework\MessageQueue\AsyncMessageInterface;
 use Shopware\Core\Framework\MessageQueue\LowPriorityMessageInterface;
+use Shopware\Core\Framework\MessageQueue\Middleware\RoutingOverwriteMiddleware;
 use Symfony\Component\Mailer\Messenger\SendEmailMessage;
 use Symfony\Component\Messenger\Envelope;
-use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\DelayStamp;
+use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 use Symfony\Component\Messenger\Stamp\StampInterface;
 use Symfony\Component\Messenger\Stamp\TransportNamesStamp;
+use Symfony\Component\Messenger\Test\Middleware\MiddlewareTestCase;
 
 /**
  * @internal
  */
 #[Package('core')]
-#[CoversClass(MessageBus::class)]
-class MessageBusTest extends TestCase
+#[CoversClass(RoutingOverwriteMiddleware::class)]
+class RoutingOverwriteMiddlewareTest extends MiddlewareTestCase
 {
+    public function testMessageIsForwardedWhenItIsBeingHandledByWorked(): void
+    {
+        // message should get async stamp, but is skipped because it has received stamp
+        $middleware = new RoutingOverwriteMiddleware([], [
+            AsyncMessage::class => 'async',
+            AsyncMessageInterface::class => 'async',
+            LowPriorityMessageInterface::class => 'low_priority',
+            SendEmailMessage::class => 'async',
+        ]);
+
+        $envelope = $middleware->handle(
+            Envelope::wrap(new AsyncMessage(), [new ReceivedStamp('my-transports')]),
+            $this->getStackMock()
+        );
+
+        static::assertNull($envelope->last(TransportNamesStamp::class));
+    }
+
     /**
-     * @param array<string, string|array<string>> $config
+     * @param array<string, string|list<string>> $config
      * @param array<StampInterface> $providedStamps
      * @param array<StampInterface> $expectedStamps
      */
@@ -35,32 +53,33 @@ class MessageBusTest extends TestCase
     public function testDispatch(object $message, array $config, array $providedStamps, array $expectedStamps): void
     {
         if (Feature::isActive('v6.7.0.0')) {
-            $bus = new MessageBus(new Collector(), [], $config);
+            $middleware = new RoutingOverwriteMiddleware([], $config);
         } else {
-            $bus = new MessageBus(new Collector(), $config, []);
+            $middleware = new RoutingOverwriteMiddleware($config, []);
         }
 
-        $envelope = $bus->dispatch($message, $providedStamps);
+        $message = Envelope::wrap($message, $providedStamps);
+        $envelope = $middleware->handle($message, $this->getStackMock());
 
-        if (!$message instanceof Envelope) {
-            $message = new Envelope($message, $expectedStamps);
-        }
-        static::assertEquals($message, $envelope);
+        static::assertEquals(
+            $expectedStamps,
+            array_merge(...array_values($envelope->all()))
+        );
     }
 
     public function testOverwrite(): void
     {
-        Feature::skipTestIfInActive('v6.7.0.0', $this);
+        Feature::skipTestIfActive('v6.7.0.0', $this);
 
-        $bus = new MessageBus(new Collector(), [], [
+        $middleware = new RoutingOverwriteMiddleware([
             EntityIndexingMessage::class => 'low_priority',
-        ]);
+        ], []);
 
         $message = new ProductIndexingMessage([]);
 
-        $envelope = $bus->dispatch($message);
+        $envelope = $middleware->handle(Envelope::wrap($message), $this->getStackMock());
 
-        static::assertEquals(new Envelope($message, [new TransportNamesStamp('low_priority')]), $envelope);
+        static::assertSame(['low_priority'], $envelope->last(TransportNamesStamp::class)?->getTransportNames());
     }
 
     public static function dispatchProvider(): \Generator
@@ -153,19 +172,4 @@ class MessageBusTest extends TestCase
  */
 class AsyncMessage
 {
-}
-
-/**
- * @internal
- */
-class Collector implements MessageBusInterface
-{
-    public function dispatch(object $message, array $stamps = []): Envelope
-    {
-        if ($message instanceof Envelope) {
-            return $message->with(...$stamps);
-        }
-
-        return new Envelope($message, $stamps);
-    }
 }

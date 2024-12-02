@@ -131,10 +131,7 @@ class ThemeDumpCommand extends Command
         $dump['domainUrl'] = $domainUrl ?? '';
         $dump['basePath'] = $this->stripProjectDir($fs->location);
 
-        $this->staticFileConfigDumper->prepareDump(
-            $this->projectDir . \DIRECTORY_SEPARATOR . 'var' . \DIRECTORY_SEPARATOR . 'theme-files.json',
-            $dump
-        );
+        $this->staticFileConfigDumper->dumpConfigInVar('theme-files.json', $dump);
 
         $this->staticFileConfigDumper->dumpConfig($this->context);
 

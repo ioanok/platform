@@ -438,7 +438,7 @@ class CartOrderRouteTest extends TestCase
         static::assertCount(1, $data['lineItems']);
 
         $interval = new \DateInterval($this->getContainer()->getParameter('shopware.api.store.context_lifetime'));
-        $intervalInSeconds = (new \DateTime())->setTimeStamp(0)->add($interval)->getTimeStamp();
+        $intervalInSeconds = (new \DateTime())->setTimestamp(0)->add($interval)->getTimestamp();
         $intervalInDays = $intervalInSeconds / 86400 + 1;
 
         // expire $originalToken context
